@@ -1,0 +1,27 @@
+# Configuration for stash commands
+
+server: '<%= @server %>'
+auth_token: <%= @auth_token %>
+
+# This is executed as <browser_command> <pull request url>
+browser_command: google-chrome
+
+defaults:
+  project: <%= @project %>
+  source_slug: <%= @source %>
+  target_slug: <%= @target %>
+  target_branch: <%= @target_branch %>
+
+# You can always specify reviewers in interactive mode, but these are here to
+# provide convenient sets of frequently-included reviewers. The names here are
+# the "names" for the desired set of stash users. You can get a (limit 1000)
+# list of users by running `stash users`
+reviewer_groups:
+  default:
+    - foo
+    - bar.baz
+
+#  core:
+#    - foo
+#    - herp
+#    - derp

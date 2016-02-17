@@ -56,13 +56,6 @@ module StashCLI
       print_table(users)
     end
 
-    desc 'repositories', 'list repositories'
-    def repositories
-      configure
-      client = Client.new(configatron.server, configatron.auth_token)
-      say client.repositories
-    end
-
     desc 'groups', 'list defined reviewer groups'
     def groups
       configure

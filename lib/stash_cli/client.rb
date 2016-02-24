@@ -32,6 +32,11 @@ module StashCLI
       JSON.parse(response.body)
     end
 
+    def branches(project, slug)
+      response = resource["projects/#{project}/repos/#{slug}/branches?limit=1000"].get
+      JSON.parse(response.body)
+    end
+
     def pull_request(options={})
       params = {
         title: options[:title],

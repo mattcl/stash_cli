@@ -56,11 +56,21 @@ module StashCLI
       print_table(users)
     end
 
+    desc 'branches', 'list branches in source'
+    def branches
+      configure
+      client = Client.new(configatron.server, configatron.auth_token)
+      resp = client.branches(configatron.defaults.project, configatron.defaults.source_slug)
+      resp['values'].each do |value|
+        say value['displayId']
+      end
+    end
+
     desc 'groups', 'list defined reviewer groups'
     def groups
       configure
 
-      groups = []
+      groups = [['empty:', '(this special group has no users)']]
       configatron.reviewer_groups.each do |name, users|
         groups << ["#{name}:", users.join(', ')]
       end
@@ -90,7 +100,19 @@ module StashCLI
       aliases: '-g',
       type: :array,
       default: [],
-      desc: 'the groups (union) of reviewers for this pull request'
+      desc: 'the groups (union) of reviewers for this pull request. There is a special group "empty" which means no reviewers'
+
+    option :additional_reviewers,
+      aliases: '-a',
+      type: :array,
+      default: [],
+      desc: 'additional users to include in this pull request (will append to groups)'
+
+    option :reviewers,
+      aliases: '-r',
+      type: :array,
+      default: [],
+      desc: 'the only users to include in this pull request (will ignore --groups and --additional-reviewers)'
 
     option :dry_run,
       type: :boolean,
@@ -128,14 +150,23 @@ module StashCLI
     protected
 
     def initial_reviewers
+      users = options[:reviewers]
+
+      # we stop here if there are users specified
+      return users if users.any?
+
       groups = options[:groups]
       if groups.any?
-        reviewers = groups.map do |group|
-          if configatron.reviewer_groups.has_key?(group)
-            configatron.reviewer_groups[group]
-          else
-            say "unknown group: #{group}"
-            nil
+        if groups.include?('empty')
+          reviewers = []
+        else
+          reviewers = groups.map do |group|
+            if configatron.reviewer_groups.has_key?(group)
+              configatron.reviewer_groups[group]
+            else
+              say "unknown group: #{group}"
+              nil
+            end
           end
         end
 
@@ -143,6 +174,10 @@ module StashCLI
       else
         reviewers = configatron.reviewer_groups.default
       end
+
+      additional_reviewers = options[:additional_reviewers]
+
+      reviewers += additional_reviewers if additional_reviewers.any?
 
       say "computed reviewers: [#{reviewers.join(', ')}]"
       reviewers

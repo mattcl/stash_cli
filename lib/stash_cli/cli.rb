@@ -47,6 +47,11 @@ module StashCLI
       say "verify configuration in #{dest}"
     end
 
+    desc 'commits SRC_BRANCH', 'list commits since source branch'
+    def commits(src_branch)
+      say GitUtils.commits_from_branch(src_branch)
+    end
+
     desc 'users', 'list users'
     def users
       configure
@@ -91,6 +96,11 @@ module StashCLI
       type: :string,
       desc: 'the description'
 
+    option :long_description,
+      aliases: '-D',
+      type: :boolean,
+      desc: 'Write description in $EDITOR'
+
     option :open,
       type: :boolean,
       default: true,
@@ -113,6 +123,11 @@ module StashCLI
       type: :array,
       default: [],
       desc: 'the only users to include in this pull request (will ignore --groups and --additional-reviewers)'
+
+    option :branch,
+      aliases: '-b',
+      type: :string,
+      desc: 'the target branch for the pull request. Will default to the one in your config'
 
     option :dry_run,
       type: :boolean,
@@ -148,6 +163,42 @@ module StashCLI
     end
 
     protected
+
+    def get_description(target_branch)
+      default_description = GitUtils.commits_from_branch(target_branch)
+
+      if options[:long_description]
+        if ENV['EDITOR'].nil? or ENV['EDITOR'].empty?
+          say 'using --long-description but $EDITOR not set. Aborting.'
+          exit 1
+        end
+
+        if options[:interactive]
+          say 'getting description via $EDITOR'
+        end
+
+        tmpfile = File.join('/tmp', "pull_request_desc_#{Time.now.to_i}")
+        File.open(tmpfile, 'w') { |f| f.puts default_description }
+
+        system(ENV['EDITOR'], tmpfile)
+
+        if File.exists?(tmpfile)
+          contents = File.read(tmpfile)
+          File.delete(tmpfile)
+          return contents
+        else
+          say 'Aborting due to missing description'
+          exit 1
+        end
+      elsif options[:interactive]
+        description = ask("description [#{options[:description]}]:").strip
+        return description unless description.empty?
+      end
+
+      return options[:description] if options[:description]
+
+      return default_description
+    end
 
     def initial_reviewers
       users = options[:reviewers]
@@ -186,28 +237,34 @@ module StashCLI
     def default_pr(title)
       reviewers = initial_reviewers
 
+      target_branch = configatron.defaults.target_branch
+      target_branch = options[:branch] if options[:branch]
+
       opts = {
         title: title,
         project: configatron.defaults.project,
         from_branch: GitUtils.current_branch,
         from_slug: configatron.defaults.source_slug,
-        target_branch: configatron.defaults.target_branch,
+        target_branch: target_branch,
         target_slug: configatron.defaults.target_slug,
         reviewers: reviewers
       }
 
-      opts[:description] = options[:description] if options[:description]
+      description = get_description(opts[:target_branch])
+
+      opts[:description] = description if description
 
       opts
     end
 
     def interactive_pr(title)
+
       target_branch =
         ask("target branch [#{configatron.defaults.target_branch}]:").strip
 
-      target_branch = configatron.defaults.target_branch if target_branch.empty?
+      description = get_description(target_branch)
 
-      description = ask("description [#{options[:description]}]:").strip
+      target_branch = configatron.defaults.target_branch if target_branch.empty?
 
       reviewers = initial_reviewers
 
@@ -232,7 +289,7 @@ module StashCLI
         reviewers: reviewers
       }
 
-      opts[:description] = description unless description.empty?
+      opts[:description] = description if description
 
       opts
     end

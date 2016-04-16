@@ -5,10 +5,13 @@ require 'base64'
 
 require 'stash_cli/client'
 require 'stash_cli/git_utils'
+require 'stash_cli/project'
 
 module StashCLI
   class CLI < Thor
     include Thor::Actions
+
+    attr_reader :project
 
     def self.source_root
       File.dirname(__FILE__)
@@ -65,7 +68,7 @@ module StashCLI
     def branches
       configure
       client = Client.new(configatron.server, configatron.auth_token)
-      resp = client.branches(configatron.defaults.project, configatron.defaults.source_slug)
+      resp = client.branches(project.project, project.source_slug)
       resp['values'].each do |value|
         say value['displayId']
       end
@@ -237,16 +240,16 @@ module StashCLI
     def default_pr(title)
       reviewers = initial_reviewers
 
-      target_branch = configatron.defaults.target_branch
+      target_branch = project.target_branch
       target_branch = options[:branch] if options[:branch]
 
       opts = {
         title: title,
-        project: configatron.defaults.project,
+        project: project.project,
         from_branch: GitUtils.current_branch,
-        from_slug: configatron.defaults.source_slug,
+        from_slug: project.source_slug,
         target_branch: target_branch,
-        target_slug: configatron.defaults.target_slug,
+        target_slug: project.target_slug,
         reviewers: reviewers
       }
 
@@ -260,11 +263,11 @@ module StashCLI
     def interactive_pr(title)
 
       target_branch =
-        ask("target branch [#{configatron.defaults.target_branch}]:").strip
+        ask("target branch [#{project.target_branch}]:").strip
 
       description = get_description(target_branch)
 
-      target_branch = configatron.defaults.target_branch if target_branch.empty?
+      target_branch = project.target_branch if target_branch.empty?
 
       reviewers = initial_reviewers
 
@@ -281,11 +284,11 @@ module StashCLI
 
       opts = {
         title: title,
-        project: configatron.defaults.project,
+        project: project.project,
         from_branch: GitUtils.current_branch,
-        from_slug: configatron.defaults.source_slug,
+        from_slug: project.source_slug,
         target_branch: target_branch,
-        target_slug: configatron.defaults.target_slug,
+        target_slug: project.target_slug,
         reviewers: reviewers
       }
 
@@ -303,6 +306,12 @@ module StashCLI
         say 'generate a basic config with "stash init"'
         exit 1
       end
+
+      @project = Project.new(
+        configatron.defaults.project,
+        configatron.defaults.source_slug,
+        configatron.defaults.target_slug,
+        configatron.defaults.target_branch)
     end
 
     def ask_required(statement, *args)

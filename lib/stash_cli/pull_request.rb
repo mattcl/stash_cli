@@ -4,7 +4,7 @@ module StashCLI
 
     def self.from_response(response, base_url)
       id = response['id']
-      url = File.join(base_url, response['link']['url'])
+      url = response['links']['self'].first['href']
       PullRequest.new(id, url)
     end
 

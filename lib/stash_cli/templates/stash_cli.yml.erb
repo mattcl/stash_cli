@@ -12,6 +12,16 @@ defaults:
   target_slug: <%= @target %>
   target_branch: <%= @target_branch %>
 
+# You can specify a list of projects here. Projects are detected via the
+# basename of the git repo directory or via a .stash-proj file at
+# <git repo basename>/.stash-proj. The must contain one line: the project name
+# projects:
+#   my-proj:
+#     project: FOO
+#     source_slug: bar
+#     target_slug: baz
+#     target_branch: master
+
 # You can always specify reviewers in interactive mode, but these are here to
 # provide convenient sets of frequently-included reviewers. The names here are
 # the "names" for the desired set of stash users. You can get a (limit 1000)

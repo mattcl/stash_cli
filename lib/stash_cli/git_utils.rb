@@ -1,5 +1,9 @@
 module StashCLI
   module GitUtils
+    def self.repo_dir
+      `git rev-parse --show-toplevel`.strip
+    end
+
     def self.current_branch
       `git rev-parse --abbrev-ref HEAD`.strip
     end

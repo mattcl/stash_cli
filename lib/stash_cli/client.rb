@@ -23,7 +23,7 @@ module StashCLI
     end
 
     def users
-      response = resource['users?limit=1000'].get
+      response = resource['users?limit=3000'].get
       JSON.parse(response.body)['values']
     end
 

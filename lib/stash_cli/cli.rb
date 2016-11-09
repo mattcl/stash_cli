@@ -307,11 +307,38 @@ module StashCLI
         exit 1
       end
 
-      @project = Project.new(
-        configatron.defaults.project,
-        configatron.defaults.source_slug,
-        configatron.defaults.target_slug,
-        configatron.defaults.target_branch)
+      repo_dir = GitUtils.repo_dir
+      proj_file = File.join(repo_dir, '.stash-proj')
+
+      if File.exist?(proj_file)
+        say 'using project from .stash-proj file'
+        project_name = File.read('.stash-proj').strip
+
+        # If you're declaring the project it had better exist
+        unless configatron.projects.has_key?(project_name)
+          say "!! project: #{project_name} requested but not defined !!"
+          say 'add this project to your .stash_cli.yml or remove the .stash-proj file'
+          exit 1
+        end
+      else
+        project_name = File.basename(repo_dir)
+      end
+
+      if configatron.projects.has_key?(project_name)
+        say "using defined project: #{project_name}"
+        @project = Project.new(
+          configatron.projects[project_name].project,
+          configatron.projects[project_name].source_slug,
+          configatron.projects[project_name].target_slug,
+          configatron.projects[project_name].target_branch)
+
+      else
+        @project = Project.new(
+          configatron.defaults.project,
+          configatron.defaults.source_slug,
+          configatron.defaults.target_slug,
+          configatron.defaults.target_branch)
+      end
     end
 
     def ask_required(statement, *args)
